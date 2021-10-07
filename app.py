@@ -1,51 +1,29 @@
-# app.py
-from flask import Flask, request, jsonify
-app = Flask(__name__)
+from flask import Flask, render_template, url_for, request, redirect
+from flask_bootstrap import Bootstrap
 
-@app.route('/getmsg/', methods=['GET'])
-def respond():
-    # Retrieve the name from url parameter
-    name = request.args.get("name", None)
+import os
+import model
 
-    # For debugging
-    print(f"got name {name}")
+app = Flask(__name__, template_folder='Template')
+Bootstrap(app)
 
-    response = {}
-
-    # Check if user sent a name at all
-    if not name:
-        response["ERROR"] = "no name found, please send a name."
-    # Check if the user entered a number not a name
-    elif str(name).isdigit():
-        response["ERROR"] = "name can't be numeric."
-    # Now the user entered a valid name
-    else:
-        response["MESSAGE"] = f"Welcome {name} to our awesome platform!!"
-
-    # Return the response in json format
-    return jsonify(response)
-
-@app.route('/post/', methods=['POST'])
-def post_something():
-    param = request.form.get('name')
-    print(param)
-    # You can add the test cases you made in the previous function, but in our case here you are just testing the POST functionality
-    if param:
-        return jsonify({
-            "Message": f"Welcome {name} to our awesome platform!!",
-            # Add this option to distinct the POST request
-            "METHOD" : "POST"
-        })
-    else:
-        return jsonify({
-            "ERROR": "no name found, please send a name."
-        })
-
-# A welcome message to test our server
-@app.route('/')
+"""
+Routes
+"""
+@app.route('/', methods=['GET','POST'])
 def index():
-    return "<h1>Welcome to our server !!</h1>"
+    if request.method == 'POST':
+        uploaded_file = request.files['file']
+        if uploaded_file.filename != '':
+            image_path = os.path.join('static', uploaded_file.filename)
+            uploaded_file.save(image_path)
+            class_name = model.get_prediction(image_path)
+            result = {
+                'class_name': class_name,
+                'image_path': image_path,
+            }
+            return render_template('result.html', result = result)
+    return render_template('index.html')
 
 if __name__ == '__main__':
-    # Threaded option to enable multiple instances for multiple user access support
-    app.run(threaded=True, port=5000)
+    app.run(debug = True)
